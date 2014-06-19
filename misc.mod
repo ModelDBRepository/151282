@@ -1,4 +1,4 @@
-: $Id: misc.mod,v 1.23 2007/12/07 21:46:51 billl Exp $
+: $Id: misc.mod,v 1.24 2011/10/14 15:00:26 samn Exp $
 
 COMMENT
 Misc. routines:
@@ -37,7 +37,6 @@ ENDCOMMENT
 INDEPENDENT {t FROM 0 TO 1 WITH 1 (ms)}
 
 NEURON {
-THREADSAFE
     SUFFIX nothing
 }
 
@@ -165,13 +164,14 @@ VERBATIM
 ENDVERBATIM
 }
 
-:* PROCEDURE sleepfor ()
-PROCEDURE sleepfor (sec) {
+:* FUNCTION sleepfor (seconds[,nanoseconds])
+: returns 0 on success, -1 on failure, nanosecond arg should be < 1 second
+FUNCTION sleepfor (sec) {
 VERBATIM
   struct timespec ts;
   ts.tv_sec = (time_t)_lsec;
-  ts.tv_nsec = (long)0;
-  nanosleep(&ts,(struct timespec*)0);
+  ts.tv_nsec = ifarg(2)?(long)*getarg(2):(long)0;
+  return (double) nanosleep(&ts,(struct timespec*)0);
 ENDVERBATIM
 }
 

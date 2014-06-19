@@ -1,4 +1,4 @@
-: $Id: vecst.mod,v 1.494 2010/12/03 17:26:01 billl Exp $
+: $Id: vecst.mod,v 1.499 2011/07/22 22:16:48 billl Exp $
  
 :* COMMENT
 COMMENT
@@ -53,7 +53,6 @@ rnd    round off to nearest integer
 ENDCOMMENT
 
 NEURON {
-THREADSAFE
   SUFFIX nothing
   : BVBASE is bit vector base number (typically 0 or -1)
   GLOBAL BVBASE, RES, VECST_INSTALLED, DEBUG_VECST, VERBOSE_VECST, INTERP_VECST, LOOSE
@@ -704,7 +703,9 @@ static double whi (void* vv) {
 }
 ENDVERBATIM
 
-:* v.iwr() write integers
+:* v.iwr(FILEOBJ[,skipsz]) write Vector as integers to FileObj
+: FILEOBJ must be open for writing
+: skipsz is a flag to skip writing the # of ints to file
 VERBATIM
 static double iwr (void* vv) {
   int i, j, nx; size_t r;
@@ -714,7 +715,7 @@ static double iwr (void* vv) {
   nx = vector_instance_px(vv, &x);
   scrset(nx);
   for (i=0;i<nx;i++) scr[i]=(int)x[i]; // copy into integer array 
-  r=fwrite(&nx,sizeof(int),1,f);  // write out the size
+  if(!ifarg(2) || !((int)*getarg(2))) r=fwrite(&nx,sizeof(int),1,f);  // write out the size
   r=fwrite(scr,sizeof(int),nx,f);
   return (double)nx;
 }
@@ -1231,7 +1232,7 @@ static double inv (void* vv) {
   double *x, nume;
   nx = vector_instance_px(vv, &x);
   if (ifarg(1)) nume=*getarg(1); else nume=1.; 
-  for (i=0;i<nx; i++) x[i]=nume/x[i];
+  for (i=0;i<nx; i++) x[i]=(x[i]==0)?1e9:nume/x[i];
   return (double)i;
 }
 ENDVERBATIM
@@ -2810,7 +2811,7 @@ ENDVERBATIM
 :* PROCEDURE install_vecst()
 PROCEDURE install_vecst () {
   if (VECST_INSTALLED==1) {
-    printf("$Id: vecst.mod,v 1.494 2010/12/03 17:26:01 billl Exp $\n")
+    printf("$Id: vecst.mod,v 1.499 2011/07/22 22:16:48 billl Exp $\n")
   } else {
   VECST_INSTALLED=1
   VERBATIM {

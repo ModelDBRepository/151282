@@ -1,4 +1,4 @@
-: $Id: stats.mod,v 1.215 2010/08/18 19:20:23 samn Exp $
+: $Id: stats.mod,v 1.227 2012/09/07 14:25:41 samn Exp $
  
 :* COMMENT
 COMMENT
@@ -20,7 +20,6 @@ v.unnan([nan_value,][inf_value])  // remove nan's and inf's from a vector
 ENDCOMMENT
 
 NEURON {
-THREADSAFE
   SUFFIX stats
   GLOBAL  INSTALLED,seed,kmeasure,verbose,self_ok_combi,hretval,flag,transpose,newline
 }
@@ -48,7 +47,8 @@ union dblint {
   double d;
 };
 
-unsigned int valseed;
+static u_int32_t ilow=0;  
+static u_int32_t ihigh=0; // same as ihigh in (/usr/site/nrniv/nrn/src/ivoc/ivocrand.cpp:75)
 static double *x1x, *y1y, *z1z;
 static void vprpr();
 
@@ -861,7 +861,7 @@ static double hash (void* vv) {
       } else   {  xx.d=vvo[j][i]; }
       if (xx.i[0]==0) { xx.i[0]=xx.i[1]; xx.i[0]<<=4; } // high order bits may be 0
       if (xx.i[1]==0) { xx.i[1]=xx.i[0]; xx.i[1]<<=4; } // low order bits unlikely 0
-      mcell_ran4_init(&xx.i[1]);
+      mcell_ran4_init(xx.i[1]);
       mcell_ran4(&xx.i[0], &y, 1, big); // generate a pseudorand number based on these
       prod*=y;  // keep multiplying these out
     }
@@ -995,9 +995,9 @@ static double setrnd (void* vv) {
 	}
       }
     } else max=1.0; // default
-    if (ifarg(i)) { y=*getarg(i++); if (y) valseed=(unsigned int)y; } // look for seed
+    if (ifarg(i)) { y=*getarg(i++); if (y) ihigh=(unsigned int)y; } // look for seed
     if (max==0) { for (i=0;i<nx;i++) x[i]=0.;
-    } else mcell_ran4(&valseed, x, nx, max);
+    } else mcell_ran4(&ihigh, x, nx, max);
     if (dfl==4.5) for (i=0;i<nx;i++) x[i]+=min;
     if (ex) for (i=0;i<nx;i++) { // go through all the ex values
       num=x[i]; lt=0; rt=nex-1;
@@ -1010,7 +1010,7 @@ static double setrnd (void* vv) {
       }
       x[i]=step*mid;
     }
-    return (double)valseed;
+    return (double)ihigh;
   } else if (flag==5) { // nx integers from [0,n)
     n=100; ex=0x0;
     if (ifarg(2)) {
@@ -1022,21 +1022,21 @@ static double setrnd (void* vv) {
     }
     i=3; // next arg
     if (dfl==5.5 || ifarg(4)) { max=*getarg(3); min=n; n=max-min+1; dfl=5.5; i=4; }
-    if (ifarg(i)) { y=*getarg(i); if (y) valseed=(unsigned int)y; }
+    if (ifarg(i)) { y=*getarg(i); if (y) ihigh=(unsigned int)y; }
     if (n<=1) { for (i=0;i<nx;i++) x[i]=0.0;
-    } else mcell_ran4(&valseed, x, nx, (double)n);
+    } else mcell_ran4(&ihigh, x, nx, (double)n);
     if (dfl==5.5)  { for (i=0;i<nx;i++) x[i]=min+floor(x[i]);
     } else if (ex) { for (i=0;i<nx;i++) x[i]=  ex[(int)x[i]];
     } else           for (i=0;i<nx;i++) x[i]=    floor(x[i]);
-    return (double)valseed;
+    return (double)ihigh;
   } else if (flag==6) { // n uniq integers from a to b
     min=*getarg(2); max=*getarg(3); i=4; nex=0;
     if (ifarg(i+1)) {
       nex=vector_arg_px(i, &ex); // exclude list
-      valseed=(unsigned int)(*getarg(i+1));
+      ihigh=(unsigned int)(*getarg(i+1));
     } else if (ifarg(i)) {
       if (hoc_is_object_arg(i)) { nex=vector_arg_px(i, &ex); // exclude list
-      } else { valseed=(unsigned int)(*getarg(i)); }
+      } else { ihigh=(unsigned int)(*getarg(i)); }
     } 
     // pick up err when ex[] contains values that are not in [min,max]
     if (nex>1) { // sort the exclude vector
@@ -1067,7 +1067,7 @@ static double setrnd (void* vv) {
       x1x = (double *)realloc(x1x,sizeof(double)*nx1);
       y1y = (double *)realloc(y1y,sizeof(double)*nx1);
       z1z = (double *)realloc(z1z,sizeof(double)*nx1);
-      mcell_ran4(&valseed, x1x, nx1, max-min+1-nex);
+      mcell_ran4(&ihigh, x1x, nx1, max-min+1-nex);
       for (i=0;i<nx1;i++) x1x[i]=floor(x1x[i])+min;
       cnt=uniq2(nx1,x1x,y1y,z1z);
     }
@@ -1141,9 +1141,9 @@ static double combi (void* vv) {
   // soc shortcut -- set self_ok_combi before call when sets are disjoint and s=1
   if (soc && s==1) { // don't need to go through this rigamarole just choose 1 from A,1 from B
     vec=vector_newsize(vv,1); v1=vector_newsize(v1v,nv1+1); v2=vector_newsize(v2v,nv2+1);
-    mcell_ran4(&valseed, vec, 1, prn);
+    mcell_ran4(&ihigh, vec, 1, prn);
     if (vfl) v1[nv1]=vpr[(int)vec[0]]; else v1[nv1]=prix+floor(vec[0]);
-    mcell_ran4(&valseed, vec, 1, pon);    
+    mcell_ran4(&ihigh, vec, 1, pon);    
     if (vfl) v2[nv2]=vpo[(int)vec[0]]; else v2[nv2]=poix+floor(vec[0]);    
     return 1.0; // note that vec will not contain the combi#
   }
@@ -1156,7 +1156,7 @@ static double combi (void* vv) {
       x1x = (double *)realloc(x1x,sizeof(double)*nx1);
       y1y = (double *)realloc(y1y,sizeof(double)*nx1);
       z1z = (double *)realloc(z1z,sizeof(double)*nx1);
-      mcell_ran4(&valseed, x1x, nx1, tot);
+      mcell_ran4(&ihigh, x1x, nx1, tot);
       for (i=0;i<nx1;i++) x1x[i]=floor(x1x[i]);
       cnt=uniq2(nx1,x1x,y1y,z1z);
     }
@@ -1184,7 +1184,7 @@ VERBATIM
 void dshuffle (double* x,int nx) {
   int n,k; double temp,y[1];
   for (n=nx;n>1;) {
-    mcell_ran4(&valseed, y, 1, n);
+    mcell_ran4(&ihigh, y, 1, n);
     n--;
     k=(int)y[0]; // random int(n) // 0 <= k < n.
     temp = x[n];
@@ -1197,7 +1197,7 @@ void dshuffle (double* x,int nx) {
 void uishuffle(unsigned int* x,int nx) {
   int n,k; unsigned int temp; double y[1];
   for (n=nx;n>1;) {
-    mcell_ran4(&valseed, y, 1, n);
+    mcell_ran4(&ihigh, y, 1, n);
     n--;
     k=(int)y[0]; // random int(n) // 0 <= k < n.
     temp = x[n];
@@ -1210,7 +1210,7 @@ void uishuffle(unsigned int* x,int nx) {
 void ishuffle(int* x,int nx) {
   int n,k,temp; double y[1];
   for (n=nx;n>1;) {
-    mcell_ran4(&valseed, y, 1, n);
+    mcell_ran4(&ihigh, y, 1, n);
     n--;
     k=(int)y[0]; // random int(n) // 0 <= k < n.
     temp = x[n];
@@ -1457,7 +1457,7 @@ static double rantran (void* vv) {
       indx=*getarg(i+1);
       if (indx>1.) { 
         x1x = (double *)realloc(x1x,sizeof(double)*rvn); 
-        mcell_ran4(&valseed, x1x, rvn, indx);
+        mcell_ran4(&ihigh, x1x, rvn, indx);
       }
     }
     for (j=0;j<rvn;j++) { 
@@ -1469,7 +1469,7 @@ static double rantran (void* vv) {
         if (ixn==1.) {
           x[j]=nv[ix];
         } else {
-          mcell_ran4(&valseed, y, 1, ixn);  // pick 1 rand value [0,ix)
+          mcell_ran4(&ihigh, y, 1, ixn);  // pick 1 rand value [0,ix)
           x[j]=nv[(int)y[0]+ix];
         }
       }
@@ -1538,7 +1538,7 @@ static double flipbits (void* vv) {
   ny = vector_arg_px(1, &y);
   flip = (int)*getarg(2);
   if (ny<nx) {hoc_execerror("flipbits:Scratch vector must adequate size", 0);}
-  mcell_ran4(&valseed, y, (unsigned int)ny, (double)nx); // indices to flip
+  mcell_ran4(&ihigh, y, (unsigned int)ny, (double)nx); // indices to flip
   for (i=0,j=0; i<flip && j<ny; j++) { // flip these bits
     ii=(int)y[j];
     if        (x[ii]==BVBASE) { x[ii]= 1e9; i++;  // mark location 
@@ -1818,6 +1818,31 @@ static double irate (void* vv) {
   }
   return 1.0;
 }
+
+//* dlvar(p,sz) -- calculates the local variation in interspike interval stored in p.
+// p should have all positive numbers. for poisson interspike intervals, dlvar will return 1.
+// for regular interspike intervals, dlvar will return 0. 
+double dlvar (double* p, int sz) {
+  int i; double s,n,d;
+  s=0.0;
+  for(i=0;i<sz-1;i++) {
+    n = p[i]-p[i+1];
+    n = n*n;
+    d = p[i]+p[i+1];
+    d = d*d;
+    s += 3*n/d;
+  }
+  return s / (double) (sz-1.0);
+}
+//* visi.lvar() -- returns local variation in interspike interval stored in visi
+static double lvar (void* vv) {
+  double *x; int sz;
+  if((sz=vector_instance_px(vv,&x))<2) {
+    fprintf(stderr,"lvar WARNA: vector size must be >= 2, returning 0!\n");
+    return 0.0;
+  }
+  return dlvar(x,sz);
+}
 ENDVERBATIM
 
 VERBATIM
@@ -1889,12 +1914,12 @@ ENDVERBATIM
 :* PROCEDURE install_stats()
 PROCEDURE install () {
   if (INSTALLED==1) {
-    printf("$Id: stats.mod,v 1.215 2010/08/18 19:20:23 samn Exp $")
+    printf("$Id: stats.mod,v 1.227 2012/09/07 14:25:41 samn Exp $")
   } else {
   INSTALLED=1
 VERBATIM
   x1x=y1y=z1z=0x0;
-  valseed=1;
+  ihigh=1;
   install_vector_method("slope", slope);
   install_vector_method("moment", moment);
   install_vector_method("vslope", vslope);
@@ -1928,6 +1953,7 @@ VERBATIM
   install_vector_method("rsampsig",rsampsig);
   install_vector_method("irate",irate);
   install_vector_method("cumsum",cumsum);
+  install_vector_method("lvar",lvar);
 ENDVERBATIM
   }
 }
@@ -2007,30 +2033,23 @@ VERBATIM {
 ENDVERBATIM
 }
 
-FUNCTION getseed () {
-  VERBATIM
-  seed=(double)valseed;
-  return seed;
-  ENDVERBATIM
-}
-
 VERBATIM
 unsigned int hashseed2 (int na, double* x) {
   int i; union dblint xx; double y, big;
   big=pow(DBL_MAX,1./(double)(na+1)); // base biggest # on nth root of num of values being used
-  valseed=1;
+  ihigh=1;
   for (i=0;i<na;i++) {
     if (x[i]==0.0) continue;
     xx.d=x[i];
     if (xx.i[0]==0) { xx.i[0]=xx.i[1]; xx.i[0]<<=4; } // high order bits may be 0
     if (xx.i[1]==0) { xx.i[1]=xx.i[0]; xx.i[1]<<=4; } // low order bits unlikely 0
     xx.i[0]+=(i+1); xx.i[1]+=(i+1); // so different for different order args
-    mcell_ran4_init(&xx.i[1]);
+    mcell_ran4_init(xx.i[1]);
     mcell_ran4(&xx.i[0], &y, 1, big); // generate a pseudorand number based on these
     while (y>UINT_MAX) y/=1e9; // UINT_MAX is 4.294967e+09
-    valseed*=(unsigned int)y;  // keep multiplying these out
+    ihigh*=(unsigned int)y;  // keep multiplying these out
   }
-  return valseed; // global
+  return ihigh; // global
 }
 ENDVERBATIM
 
@@ -2051,7 +2070,7 @@ FUNCTION hashseed () {
   } 
   hashseed2(nb,x);
   if(sf) free(x); //only free if malloc'd
-  _lhashseed=(double)valseed;
+  _lhashseed=(double)ihigh;
   ENDVERBATIM
 }
 
@@ -2076,23 +2095,33 @@ FUNCTION vseed () {
   srand48((unsigned)seed);
   set_seed(seed);
   srandom(seed);
-  valseed=(unsigned int)seed;
+  ihigh=(unsigned int)seed;
   return seed;
 #endif
   ENDVERBATIM
 }
 
-: mc4seed() set valseed for mccell_ran4() as series of factors so as not to lose low order 
-: digits before casting double to unsigned int, then call mcell_ran4_init with new valseed
+: mc4seed() sets 'low' bits for mccell_ran4() 
+: opt 2nd arg ihigh is 'high' bits; see (/usr/site/nrniv/nrn/src/ivoc/ivocrand.cpp:85) u_int32_t ihigh_, orig_, ilow_
 FUNCTION mc4seed () {
   VERBATIM
-  int i;
-  valseed=(unsigned int)(*getarg(1));
-  for (i=2;ifarg(i);i++) {
-    valseed*=(unsigned int)(*getarg(i));
+  double x; u_int32_t idx; unsigned int y;
+  if (!ifarg(1)) {
+    printf("low:%d high:%d\n",(unsigned int)ilow,(unsigned int)ihigh);
+    return (double)ihigh;
+  } else {
+    // u_int32_t idx=(u_int32_t) chkarg(1, 0., 4294967295.);
+    x = *getarg(1);
+    if (x>dmaxuint) {y=(unsigned int)x%4294967296; printf("Warning truncating %20.0f to %d (ilow)\n",x,y);x=y;}
+    ilow = idx = (u_int32_t)x;
+    mcell_ran4_init(idx);
   }
-  mcell_ran4_init(&valseed); // do initialization
-  return valseed;
+  if (ifarg(2)) {
+    x = *getarg(2);
+    if (x>dmaxuint) {y=(unsigned int)x%4294967296; printf("Warning truncating %20.0f to %d (ihigh)\n",x,y);x=y;}
+    ihigh=(u_int32_t) x;
+  }
+  return (double)ihigh;
   ENDVERBATIM
 }
 
