@@ -1,0 +1,67 @@
+// $Id: pywrap.hoc,v 1.31 2012/08/04 03:19:13 samn Exp $ 
+
+//* variables
+declare("INITPYWRAP",0) // whether initialized properly
+
+func initpywrap () { localobj pjnk
+  INITPYWRAP=0
+  if(2!=name_declared("p")){printf("initpywrap ERR0A: PythonObject p not found in python.hoc!\n") return 0}
+  print p  
+  pjnk=new PythonObject()
+  if(!isojt(p,pjnk)){printf("initpywrap ERR0B: PythonObject p not found in python.hoc!\n")}
+  if(!nrnpython("import numpy")) {printf("pypmtm ERR0C: could not import numpy python library!\n") return 0}
+  INITPYWRAP=1
+  return 1
+}
+
+initpywrap()
+
+//** pypmtm(vec,samplingrate[,nw])
+// this function calls python version of pmtm, runs multitaper power spectra, returns an nqs
+obfunc pypmtm () { local sampr,spc,nw localobj vin,str,nqp,ptmp
+  if(!INITPYWRAP) {printf("pypmtm ERR0A: python.hoc not initialized properly\n") return nil}
+  if(!nrnpython("from mtspec import *")) {printf("pypmtm ERR0B: could not import mtspec python library!\n") return nil}  
+  if(numarg()==0) {printf("pypmtm(vec,samplingrate)\n") return nil}
+  vin=$o1 sampr=$2 str=new String()
+  p.vjnk = vin.to_python()
+  p.vjnk = p.numpy.array(p.vjnk)
+  spc = 1.0 / sampr // "spacing"
+  nw=4 if(numarg()>2) nw=$3
+  sprint(str.s,"[Pxx,w]=mtspec(vjnk,%g,%d)",spc,nw)
+  nrnpython(str.s)
+  nqp=new NQS("f","pow")
+  nqp.v.from_python(p.w)
+  nqp.v[1].from_python(p.Pxx)
+  return nqp
+}
+
+//** pypsd(vec,samplingrate[,NFFT])
+// this function calls python version of psd (power-spectral density)
+// returns an nqs with psd
+obfunc pypsd () { local sampr,NFFT localobj v1,str,nqp
+  if(!INITPYWRAP) {printf("pypsd ERR0A: python.hoc not initialized properly\n") return nil}
+  if(!nrnpython("from matplotlib.mlab import psd")) {printf("pypsd ERR0B: could not import psd from matplotlib.mlab!\n") return nil}  
+  // nrnpython("from matplotlib.mlab import window_none")
+  if(numarg()==0) {printf("pypsd(vec,samplingrate)\n") return nil}
+  v1=$o1 sampr=$2 str=new String() 
+  {p.vjnk1=v1.to_python() p.vjnk1=p.numpy.array(p.vjnk1)}
+  if(numarg()>2) NFFT=$3 else NFFT=v1.size
+  if(sz%2==1) sz+=1
+  sprint(str.s,"[Pxx,freqs]=psd(vjnk1,Fs=%g,NFFT=%d)",sampr,NFFT)
+  nrnpython(str.s)
+  nqp=new NQS("f","pow")
+  nqp.v[0].from_python(p.freqs)
+  nqp.v[1].from_python(p.Pxx)
+  return nqp
+}
+
+//* nrnpsd(vector,samplingrate) - calculates PSD and returns as an NQS object
+// uses NEURON spctrm function
+obfunc nrnpsd () { local sampr localobj vec,nqp
+  vec=$o1 sampr=$2
+  nqp=new NQS("f","pow")
+  nqp.v[1].spctrm(vec)
+  nqp.v.indgen(0,sampr/2,(sampr/2)/nqp.v[1].size)
+  nqp.v.resize(nqp.v[1].size)
+  return nqp
+}
