@@ -68,3 +68,6 @@ is the same.
 misc.h, misc.mod, stats.mod, vecst.mod which fixes type checking
 errors that some compilers generate as reported by a kind modeler.
 Also the readme was made narrower for nicer display in modeldb.
+
+20160915 This updated version from the Lytton lab allows their models
+which contain misc.mod and misc.h to compile on the mac.
