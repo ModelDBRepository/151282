@@ -1664,6 +1664,7 @@ static double vpr2 (void* vv) {
     }
     printf("\n");
   }
+  return 0.;
 }
 
 static void vprpr (double x, int base) {
