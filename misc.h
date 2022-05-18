@@ -4,6 +4,8 @@
 #include <math.h>
 #include <limits.h> /* contains LONG_MAX */
 #include <time.h>
+#include <sys/time.h> 
+#include <float.h>
 #include <pthread.h>
 #include <stdint.h>
 
@@ -66,19 +68,12 @@ extern void vector_resize();
 extern int vector_buffer_size(void*);
 extern FILE* hoc_obj_file_arg(int narg);
 extern void mcell_ran4_init(uint32_t idum);
+extern int nrn_mlh_gsort(double* vec, int* base_ptr, int total_elems, int (*)(double, double));
 extern Symbol *hoc_get_symbol(char *);
 extern int hoc_is_tempobj_arg(int narg);
 Object* ivoc_list_item(Object*, int);
-#else // TODO: Update nrn master & C++ PR
-#ifdef __cplusplus
-extern "C" {
 #endif
-Object* ivoc_list_item(Object*, int);
-Symbol* hoc_get_symbol(const char* var);
-#ifdef __cplusplus
-}
-#endif
-#endif
+
 double *list_vector_resize(Object *ob, int i, int sz);
 int list_vector_px(Object *ob, int i, double** px);
 extern int list_vector_px2 (Object *ob, int i, double** px, IvocVect** vv);
@@ -111,7 +106,8 @@ extern double hoc_epsilon;
 extern int stoprun;
 extern void set_seed();
 extern void dshuffle(double* x,int nx);
-extern int nrn_mlh_gsort();
+extern void mcell_ran4_init(u_int32_t);
+extern double mcell_ran4(u_int32_t *idx1, double *x, unsigned int n, double range);
 extern int ivoc_list_count(Object*);
 extern int hoc_is_double_arg(int narg);
 extern int hoc_is_str_arg(int narg);
@@ -121,7 +117,7 @@ extern Symbol *hoc_lookup(const char*);
 extern Point_process* ob2pntproc(Object*);
 
 extern char* hoc_object_name(Object*);
-extern int cmpdfn();
+extern int cmpdfn(double, double);
 extern int openvec(int, double **);
 static void hxe() { hoc_execerror("",0); }
 extern void FreeListVec(ListVec** pp);
@@ -147,8 +143,3 @@ extern double ismono1 (double *x, int n, int flag);
 double kcorfast(double* input1, double* input2, double* i1d , double* i2d,int n,double* ps);
 double Rktau (double* x, double* y, int n); // R version
 double kcorfast (double* input1, double* input2, double* i1d , double* i2d,int n,double* ps);
-
-
-
-
-

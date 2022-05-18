@@ -1345,7 +1345,7 @@ ENDVERBATIM
 : max is maximum diff to add to the tq db
 VERBATIM
 static double nearall (void* vv) {
-  register int	lo, hi, mid;
+  int	lo, hi, mid;
   int i, j, k, kk, nx, ny, minind, nv[4];
   Object *ob;
   IvocVect* vvl[4];
