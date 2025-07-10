@@ -35,6 +35,4 @@ Note that since Matlab is not assumed to be available, the results will appear s
 
 20221216 Python3 migration via 2to3.
 
----
-
-2025-07-09: Converted README to Markdown.
+20250709 Converted README to Markdown.
